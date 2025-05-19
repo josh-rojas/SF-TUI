@@ -1,0 +1,11 @@
+404: Not Found
+# Additional common ignores
+.DS_Store
+*.log
+.env
+node_modules/
+.idea/
+.vscode/
+*.swp
+*.swo
+tmp/
