@@ -12,15 +12,40 @@ export function createInkMock() {
     };
   });
   
-  // Mock useInput from Ink
-  vi.mock('ink', async () => {
-    const actual = await vi.importActual('ink');
+  // Mock Ink components with a simple implementation
+  vi.mock('ink', () => {
+    const React = require('react');
+    
+    const Box = ({ children, ...props }: any) => {
+      return React.createElement('div', {
+        'data-testid': props['data-testid'] || 'ink-box',
+        'data-props': JSON.stringify(props)
+      }, children);
+    };
+    
+    const Text = ({ children, ...props }: any) => {
+      return React.createElement('span', {
+        'data-testid': props['data-testid'] || 'ink-text',
+        'data-props': JSON.stringify(props)
+      }, children);
+    };
+    
     return {
-      ...actual as object,
-      useInput: vi.fn((callback) => callback),
+      __esModule: true,
+      default: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, {}, children),
+      Box,
+      Text,
+      useInput: vi.fn((handler) => handler),
       useApp: vi.fn(() => ({ exit: vi.fn() })),
-      Box: vi.fn(({ children, ...props }) => React.createElement('div', props, children)),
-      Text: vi.fn(({ children, ...props }) => React.createElement('span', props, children)),
+      useFocus: vi.fn(() => ({
+        isFocused: false,
+        focus: vi.fn(),
+      })),
+      useFocusManager: vi.fn(() => ({
+        focusNext: vi.fn(),
+        focusPrevious: vi.fn(),
+        focus: vi.fn(),
+      })),
     };
   });
   

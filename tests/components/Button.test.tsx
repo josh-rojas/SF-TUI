@@ -1,29 +1,49 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import Button from '../../src/components/common/Button';
 import { createInkMock } from '../testUtils';
 
 // Mock useTheme
+const mockTheme = {
+  colors: {
+    text: 'white',
+    textInverse: 'black',
+    background: 'black',
+    backgroundHover: 'darkgray',
+    highlight: 'blue',
+    border: 'gray',
+    textMuted: 'lightgray',
+    primary: 'blue',
+    secondary: 'purple',
+    success: 'green',
+    warning: 'yellow',
+    error: 'red',
+    info: 'cyan',
+  }
+};
+
 vi.mock('../../src/themes', () => ({
-  useTheme: () => ({
-    colors: {
-      text: 'white',
-      textInverse: 'black',
-      background: 'black',
-      backgroundHover: 'darkgray',
-      highlight: 'blue',
-      border: 'gray',
-      textMuted: 'lightgray',
-      primary: 'blue',
-      secondary: 'purple',
-      success: 'green',
-      warning: 'yellow',
-      error: 'red',
-      info: 'cyan',
-    }
-  }),
+  useTheme: () => mockTheme,
 }));
+
+// Mock Ink components
+vi.mock('ink', async () => {
+  const actual = await vi.importActual('ink');
+  return {
+    ...actual,
+    Box: ({ children, ...props }: any) => (
+      <div data-testid="ink-box" {...props}>
+        {children}
+      </div>
+    ),
+    Text: ({ children, ...props }: any) => (
+      <span data-testid="ink-text" {...props}>
+        {children}
+      </span>
+    ),
+  };
+});
 
 // Create Ink mocks
 createInkMock();
@@ -34,131 +54,127 @@ describe('Button Component', () => {
   });
 
   it('renders with default props', () => {
-    const { getByText } = render(
+    render(
       <Button>Click me</Button>
     );
     
     // Should render the button text
-    expect(getByText('Click me')).toBeDefined();
+    expect(screen.getByText('Click me')).toBeInTheDocument();
   });
 
   it('renders with different variants', () => {
-    const variants = ['primary', 'secondary', 'success', 'warning', 'error', 'info', 'default'];
+    const variants: Array<React.ComponentProps<typeof Button>['variant']> = [
+      'primary',
+      'secondary',
+      'success',
+      'warning',
+      'error',
+      'info',
+      'default'
+    ];
     
     for (const variant of variants) {
-      const { getByText, unmount } = render(
-        <Button variant={variant as any}>
+      const { unmount } = render(
+        <Button variant={variant}>
           {variant} button
         </Button>
       );
       
-      // Should render the button text for each variant
-      expect(getByText(`${variant} button`)).toBeDefined();
-      
+      expect(screen.getByText(`${variant} button`)).toBeInTheDocument();
       unmount();
     }
   });
-
+  
   it('calls onPress when clicked', () => {
-    const onPress = vi.fn();
+    const handlePress = vi.fn();
     render(
-      <Button onPress={onPress}>Click me</Button>
+      <Button onPress={handlePress}>
+        Click me
+      </Button>
     );
     
-    // Get the input handler
-    const useInputMock = require('ink').useInput;
-    const inputHandler = useInputMock.mock.calls[0][0];
-    
-    // Simulate pressing Enter
-    inputHandler('', { return: true });
-    
-    // Check if onPress was called
-    expect(onPress).toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Click me'));
+    expect(handlePress).toHaveBeenCalledTimes(1);
   });
-
+  
   it('calls onPress when space key is pressed', () => {
-    const onPress = vi.fn();
+    const handlePress = vi.fn();
     render(
-      <Button onPress={onPress}>Press Space</Button>
+      <Button onPress={handlePress}>
+        Press me
+      </Button>
     );
     
-    // Get the input handler
-    const useInputMock = require('ink').useInput;
-    const inputHandler = useInputMock.mock.calls[0][0];
-    
-    // Simulate pressing Space
-    inputHandler(' ', {});
-    
-    // Check if onPress was called
-    expect(onPress).toHaveBeenCalled();
+    const button = screen.getByText('Press me');
+    fireEvent.keyDown(button, { key: ' ' });
+    expect(handlePress).toHaveBeenCalledTimes(1);
   });
-
+  
   it('does not call onPress when disabled', () => {
-    const onPress = vi.fn();
+    const handlePress = vi.fn();
     render(
-      <Button onPress={onPress} disabled>
+      <Button onPress={handlePress} disabled>
         Disabled Button
       </Button>
     );
     
-    // Get the input handler (should be inactive)
-    const useInputMock = require('ink').useInput;
-    const options = useInputMock.mock.calls[0][1];
-    
-    // isActive should be false
-    expect(options.isActive).toBe(false);
-    
-    // Even if we call the handler directly, onPress should not be called
-    const inputHandler = useInputMock.mock.calls[0][0];
-    inputHandler('', { return: true });
-    
-    // Check that onPress was not called
-    expect(onPress).not.toHaveBeenCalled();
+    const button = screen.getByText('Disabled Button');
+    fireEvent.click(button);
+    expect(handlePress).not.toHaveBeenCalled();
   });
-
+  
   it('does not call onPress when loading', () => {
-    const onPress = vi.fn();
+    const handlePress = vi.fn();
     render(
-      <Button onPress={onPress} loading>
+      <Button onPress={handlePress} loading>
         Loading Button
       </Button>
     );
     
-    // Get the input handler (should be inactive)
-    const useInputMock = require('ink').useInput;
-    const options = useInputMock.mock.calls[0][1];
-    
-    // isActive should be false
-    expect(options.isActive).toBe(false);
-    
-    // Check that the button shows loading text
-    expect(screen.getByText('Loading...')).toBeDefined();
+    const button = screen.getByText('Loading...');
+    fireEvent.click(button);
+    expect(handlePress).not.toHaveBeenCalled();
   });
-
+  
   it('renders with full width when specified', () => {
-    const { container } = render(
-      <Button fullWidth>Full Width Button</Button>
-    );
-    
-    // Check that the button has width="100%" property
-    const button = container.querySelector('[width="100%"]');
-    expect(button).toBeDefined();
-  });
-
-  it('applies custom styles', () => {
-    const customStyle = {
-      paddingLeft: 5,
-      paddingRight: 5,
-      height: 5
-    };
-    
     render(
-      <Button style={customStyle}>Styled Button</Button>
+      <Button fullWidth>
+        Full Width
+      </Button>
     );
     
-    // Unfortunately we can't easily test the style application in this mock setup,
-    // but we can verify the component renders without crashing
-    expect(screen.getByText('Styled Button')).toBeDefined();
+    const button = screen.getByText('Full Width');
+    expect(button.closest('[data-testid="ink-box"]')).toHaveStyle({ width: '100%' });
+  });
+  
+  it('applies custom styles', () => {
+    const customStyle = { backgroundColor: 'purple', color: 'white' };
+    render(
+      <Button style={customStyle}>
+        Styled Button
+      </Button>
+    );
+    
+    const button = screen.getByText('Styled Button');
+    expect(button).toHaveStyle(customStyle);
+  });
+  
+  it('passes through boxProps to the Box component', () => {
+    render(
+      <Button 
+        boxProps={{ 
+          borderStyle: 'round',
+          borderColor: 'blue',
+          padding: 1,
+          // @ts-expect-error - data-testid is not in the Box props but we need it for testing
+          'data-testid': 'custom-box' 
+        }}
+      >
+        With Box Props
+      </Button>
+    );
+    
+    expect(screen.getByTestId('custom-box')).toBeInTheDocument();
   });
 
   it('renders focused state', () => {

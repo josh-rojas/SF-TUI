@@ -21,16 +21,23 @@ export enum ErrorCategory {
 }
 
 // Define error report interface
+
+/**
+ * Defines the structure for detailed information accompanying an error report.
+ * Can include any relevant key-value pairs.
+ */
+export type ErrorDetails = Record<string, any>;
+
 export interface ErrorReport {
   id: string;
   timestamp: Date;
   message: string;
-  error?: Error;
+  error: Error | null;
   severity: ErrorSeverity;
   category: ErrorCategory;
-  context?: string;
-  details?: Record<string, any>;
-  userAction?: string;
+  context: string | null;
+  details: ErrorDetails | null;
+  userAction: string | null;
   handled: boolean;
 }
 
@@ -46,13 +53,21 @@ export interface UserFeedback {
 // Define subscribers for error notifications
 type ErrorReporterSubscriber = (error: ErrorReport) => void;
 
+const MAX_ERROR_REPORTS = 100; // Maximum number of error reports to store
+const ERROR_REPORT_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+
 class ErrorReporter {
   private static instance: ErrorReporter;
-  private errors: Map<string, ErrorReport> = new Map();
+  private errors: Map<string, ErrorReport> = new Map(); // Stores errors by ID
+  private errorOrder: string[] = []; // Stores error IDs in the order they were reported (for FIFO eviction)
   private subscribers: ErrorReporterSubscriber[] = [];
+  private cleanupInterval: NodeJS.Timeout | null = null;
   private generateErrorId = (): string => `error-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-  private constructor() {}
+  private constructor() {
+    this.cleanupInterval = setInterval(() => this.cleanupOldErrors(), CLEANUP_INTERVAL_MS);
+  }
 
   public static getInstance(): ErrorReporter {
     if (!ErrorReporter.instance) {
@@ -101,66 +116,125 @@ class ErrorReporter {
   public reportError(
     message: string,
     errorOrOptions?: Error | {
-      error?: Error,
-      severity?: ErrorSeverity,
-      category?: ErrorCategory,
-      context?: string,
-      details?: Record<string, any>,
-      userAction?: string,
-    }
+      error?: Error | null;
+      severity?: ErrorSeverity;
+      category?: ErrorCategory;
+      context?: string | null;
+      details?: ErrorDetails | null;
+      userAction?: string | null;
+    } | null | undefined
   ): ErrorReport {
-    // Handle the case where the second parameter is an Error object
-    let error: Error | undefined;
-    let severity = ErrorSeverity.MEDIUM;
-    let category = ErrorCategory.UNKNOWN;
-    let context: string | undefined;
-    let details: Record<string, any> | undefined;
-    let userAction: string | undefined;
-    
-    if (errorOrOptions instanceof Error) {
-      error = errorOrOptions;
-    } else if (errorOrOptions) {
-      error = errorOrOptions.error;
-      severity = errorOrOptions.severity || severity;
-      category = errorOrOptions.category || category;
-      context = errorOrOptions.context;
-      details = errorOrOptions.details;
-      userAction = errorOrOptions.userAction;
+    // Clean up old errors before adding a new one to manage memory
+    this.cleanupOldErrors();
+
+    // Process the error or options
+    let errorObj: Error | null = null;
+    let errorSeverity = ErrorSeverity.MEDIUM;
+    let errorCategory = ErrorCategory.UNKNOWN;
+    let errorContext: string | null = null;
+    let errorDetails: ErrorDetails | null = null;
+    let errorUserAction: string | null = null;
+
+    if (errorOrOptions) {
+      if (errorOrOptions instanceof Error) {
+        errorObj = errorOrOptions;
+      } else {
+        const options = errorOrOptions;
+        
+        if ('error' in options) {
+          errorObj = options.error || null;
+        }
+        if ('severity' in options && options.severity !== undefined) {
+          errorSeverity = options.severity;
+        }
+        if ('category' in options && options.category !== undefined) {
+          errorCategory = options.category;
+        }
+        if ('context' in options) {
+          errorContext = options.context || null;
+        }
+        if ('details' in options) {
+          errorDetails = options.details || null;
+        }
+        if ('userAction' in options) {
+          errorUserAction = options.userAction || null;
+        }
+      }
     }
-    
-    // Create the error report
+
     const report: ErrorReport = {
       id: this.generateErrorId(),
       timestamp: new Date(),
       message,
-      error,
-      severity,
-      category,
-      context,
-      details,
-      userAction,
+      error: errorObj,
+      severity: errorSeverity,
+      category: errorCategory,
+      context: errorContext,
+      details: errorDetails,
+      userAction: errorUserAction,
       handled: false,
     };
-    
+
     // Store the error
     this.errors.set(report.id, report);
+    this.errorOrder.push(report.id);
+
+    // Log the error using the appropriate log level
+    const currentLogLevel = this.severityToLogLevel(report.severity);
+    const errorMessage = report.error?.message ?? '';
+    const currentLogMessage = errorMessage ? `${message}: ${errorMessage}` : message;
     
-    // Log the error
-    const logLevel = this.severityToLogLevel(severity);
-    const logMessage = context ? `[${context}] ${message}` : message;
-    const logDetails = {
-      ...details,
-      errorId: report.id,
-      category,
-      severity,
-    };
+    const currentLogDetails: Record<string, unknown> = {};
     
-    logger.log(logLevel, logMessage, logDetails, error);
+    if (errorMessage) {
+      currentLogDetails.error = errorMessage;
+    }
+    if (report.error?.stack) {
+      currentLogDetails.stack = report.error.stack;
+    }
+    if (report.details) {
+      Object.assign(currentLogDetails, report.details);
+    }
+    
+    const errorToLog = report.error ?? undefined;
+    
+    switch (currentLogLevel) {
+      case LogLevel.ERROR:
+        logger.error(currentLogMessage, currentLogDetails, errorToLog);
+        break;
+      case LogLevel.WARN:
+        logger.warn(currentLogMessage, currentLogDetails, errorToLog);
+        break;
+      case LogLevel.FATAL:
+        logger.fatal(currentLogMessage, currentLogDetails, errorToLog);
+        break;
+      default:
+        logger.info(currentLogMessage, currentLogDetails);
+        break;
+    }
     
     // Notify subscribers
     this.notifySubscribers(report);
     
     return report;
+  }
+
+  /**
+   * Cleans up errors that are older than the defined TTL.
+   * @private
+   */
+  private cleanupOldErrors(): void {
+    const now = Date.now();
+    const newErrorOrder: string[] = [];
+    for (const errorId of this.errorOrder) {
+      const errorReport = this.errors.get(errorId);
+      if (errorReport && (now - errorReport.timestamp.getTime()) < ERROR_REPORT_TTL_MS) {
+        newErrorOrder.push(errorId); // Keep if not expired
+      } else {
+        this.errors.delete(errorId); // Delete expired from map
+      }
+    }
+    this.errorOrder = newErrorOrder;
   }
 
   // Mark an error as handled
@@ -185,6 +259,8 @@ class ErrorReporter {
   // Clear all errors
   public clearErrors(): void {
     this.errors.clear();
+    this.errorOrder = [];
+    logger.info('All error reports cleared.');
   }
 
   // Submit user feedback for an error
@@ -195,44 +271,56 @@ class ErrorReporter {
   }
 
   // Helper methods for common error categories
-  public reportCommandError(message: string, error?: Error, details?: Record<string, any>): ErrorReport {
+  public reportCommandError(message: string, error?: Error | null, details: ErrorDetails | null = null): ErrorReport {
     return this.reportError(message, {
-      error,
+      error: error || null,
       severity: ErrorSeverity.MEDIUM,
       category: ErrorCategory.COMMAND,
-      details,
-      userAction: 'Try running the command again or check the command arguments.',
+      details: details || null,
+      userAction: 'Please check the command and try again.',
     });
   }
 
-  public reportNetworkError(message: string, error?: Error, details?: Record<string, any>): ErrorReport {
+  public reportNetworkError(message: string, error?: Error | null, details: ErrorDetails | null = null): ErrorReport {
     return this.reportError(message, {
-      error,
+      error: error || null,
       severity: ErrorSeverity.MEDIUM,
       category: ErrorCategory.NETWORK,
-      details,
-      userAction: 'Check your internet connection and try again.',
+      details: details || null,
+      userAction: 'Please check your network connection and try again.',
     });
   }
 
-  public reportAuthError(message: string, error?: Error, details?: Record<string, any>): ErrorReport {
+  public reportAuthError(message: string, error?: Error | null, details: ErrorDetails | null = null): ErrorReport {
     return this.reportError(message, {
-      error,
+      error: error || null,
       severity: ErrorSeverity.HIGH,
       category: ErrorCategory.AUTH,
-      details,
-      userAction: 'Try logging in again using sf org login web.',
+      details: details || null,
+      userAction: 'Please check your credentials and try again.',
     });
   }
 
-  public reportValidationError(message: string, error?: Error, details?: Record<string, any>): ErrorReport {
+  public reportValidationError(message: string, error?: Error | null, details: ErrorDetails | null = null): ErrorReport {
     return this.reportError(message, {
-      error,
+      error: error || null,
       severity: ErrorSeverity.LOW,
       category: ErrorCategory.VALIDATION,
-      details,
-      userAction: 'Check your input values and try again.',
+      details: details || null,
+      userAction: 'Please check your input and try again.',
     });
+  }
+
+  /**
+   * Gracefully shuts down the error reporter, clearing any intervals.
+   */
+  public shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    // Perform any other cleanup if necessary
+    logger.info('ErrorReporter shutdown complete.');
   }
 }
 
@@ -251,8 +339,20 @@ export function setupGlobalErrorHandlers(): void {
     });
     
     // Log the error and exit gracefully
-    logger.fatal('Uncaught exception', { error });
-    process.exit(1);
+    logger.fatal('Uncaught exception', { originalError: error.message, stack: error.stack });
+    // Ensure logger flushes before exiting
+    if (typeof logger.shutdown === 'function') {
+      logger.shutdown().then(() => {
+        errorReporter.shutdown();
+        process.exit(1);
+      }).catch(() => {
+        errorReporter.shutdown();
+        process.exit(1);
+      });
+    } else {
+      errorReporter.shutdown();
+      process.exit(1);
+    }
   });
 
   // Handle unhandled promise rejections
@@ -267,6 +367,6 @@ export function setupGlobalErrorHandlers(): void {
     });
     
     // Log the error but don't exit
-    logger.error('Unhandled promise rejection', { error });
+    logger.error('Unhandled promise rejection', { originalError: error.message, stack: error.stack, promiseDetails: promise });
   });
 }

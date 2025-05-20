@@ -4,7 +4,7 @@
 
 A modern, interactive terminal-based interface for Salesforce development. SF TUI provides a user-friendly way to interact with Salesforce CLI commands, making it easier for developers and admins to manage their Salesforce orgs and projects without memorizing complex CLI commands.
 
-![SF TUI Demo](https://raw.githubusercontent.com/yourusername/sf-tui/main/docs/demo.gif)
+![SF TUI Demo](docs/demo.gif)
 
 ## ✨ Features
 
@@ -13,19 +13,26 @@ A modern, interactive terminal-based interface for Salesforce development. SF TU
 - 🔐 **Authentication**: Easily authenticate with your orgs
 - 🏷️ **Alias Management**: Manage your Salesforce CLI aliases
 - 📦 **Metadata Tools**: Deploy, retrieve, and manage metadata
-- ⚡ **Run Tools**: Execute Apex, Flows, and more
+- ⚡ **Run Tools**: Execute Apex, Flows, and SOQL queries
 - 🧩 **Plugin Management**: View and manage your CLI plugins
 - 💾 **Response Caching**: Improve performance with smart command caching
 - 🎨 **Theme Support**: Customize your experience with different themes
 - ⌨️ **Keyboard Shortcuts**: Navigate efficiently with keyboard shortcuts
+- 🧙 **First-Run Wizard**: Guided onboarding for new users
+- 💡 **Splash Screen**: Branded loading and first-run experience
+- 🛡️ **Robust Error Handling**: Error boundaries and user-friendly recovery
+- 📊 **Progress Tracking**: Visual progress bars for long-running operations
+- 🔔 **Notification System**: Toast-style notifications for operation results
+
+---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18 or later
+- [Node.js](https://nodejs.org/) 18 or later
 - npm 9 or later
-- Salesforce CLI (sf) installed and configured
+- [Salesforce CLI (sf)](https://developer.salesforce.com/tools/sfdxcli) installed and configured
 
 ### Installation
 
@@ -41,11 +48,14 @@ If installing from source:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/sf-tui.git
+git clone https://github.com/YOUR_GITHUB_USERNAME/sf-tui.git
 cd sf-tui
 
 # Install dependencies
 npm install
+
+# Build the project
+npm run build
 
 # Link the package globally
 npm link
@@ -62,18 +72,123 @@ sft --help
 
 # Show version
 sft --version
+
+# Enable debug logging
+DEBUG=* sft
 ```
+
+---
+
+## 🧙 First-Run Experience & Splash Screen
+
+- On first launch, SF TUI displays a splash screen and a guided setup wizard
+- The wizard collects your preferences and configures the app for your workflow
+- It creates a config file at `~/.sftui/config.json` with your settings
+- Returning users go straight to the main menu
+
+---
+
+## 🗂 Configuration
+
+SF TUI can be configured in multiple ways:
+
+### User Configuration
+
+- Config is stored in `~/.sftui/config.json` by default
+- You can edit this file manually or through the settings menu in the app
+- If the config is missing or corrupted, SF TUI will prompt you to reconfigure
+
+### Environment Variables
+
+SF TUI supports the following environment variables:
+
+- `SF_TUI_LOG_LEVEL`: Sets logging level (DEBUG, INFO, WARN, ERROR, FATAL)
+- `SF_TUI_CONSOLE_OUTPUT`: Enable/disable console logging (true/false)
+- `SF_TUI_FILE_OUTPUT`: Enable/disable file logging (true/false)
+- `SF_TUI_LOG_FILE`: Custom log file path
+- `SF_TUI_MAX_LOG_FILE_SIZE`: Maximum log file size in bytes
+- `SF_TUI_MAX_LOG_FILES`: Maximum number of rotated log files to keep
+- `DEBUG`: Enable verbose debug output when set to any value
+- `SFTUI_CONFIG_DIR`: Specify a custom config directory location
+
+---
+
+## 🛡️ Error Handling & Logging
+
+SF TUI provides robust error handling and comprehensive logging:
+
+### Error Handling
+
+- Structured error reporting with severity levels
+- User-friendly error notifications with suggested fixes
+- Error boundaries to prevent application crashes
+- Recovery options for common error scenarios
+
+### Logging
+
+- Multi-level logging (DEBUG, INFO, WARN, ERROR, FATAL)
+- File and console output with rotation
+- Logs stored in `~/.sf-tui/logs/sf-tui.log` by default
+- Structured format with timestamps, levels, and context
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+SF TUI is designed for keyboard-driven operation:
+
+- **Global shortcuts**:
+  - `?`: Show help screen
+  - `q`/`Esc`: Go back/exit current screen
+  - `Ctrl+C`: Exit application
+  - `Alt+T`: Toggle theme
+  - `Alt+S`: Toggle status bar
+
+- **Context-specific shortcuts** are displayed at the bottom of each screen
+- All shortcuts can be customized in the settings menu
+
+---
 
 ## 🖥️ Screenshots
 
 ### Main Menu
-![Main Menu](https://raw.githubusercontent.com/yourusername/sf-tui/main/docs/main-menu.png)
+![Main Menu](docs/main-menu.png)
 
 ### Org Management
-![Org Management](https://raw.githubusercontent.com/yourusername/sf-tui/main/docs/org-management.png)
+![Org Management](docs/org-management.png)
 
 ### Metadata Tools
-![Metadata Tools](https://raw.githubusercontent.com/yourusername/sf-tui/main/docs/metadata-tools.png)
+![Metadata Tools](docs/metadata-tools.png)
+
+---
+
+## 🧩 Architecture
+
+SF TUI is built on a modern React-based architecture:
+
+### Core Components
+
+1. **React + Ink UI Layer**
+   - Uses Ink (React for the terminal) to render interactive terminal UI
+   - Component hierarchy with context providers for state management
+   - Error boundaries to prevent UI crashes
+
+2. **Command Execution System**
+   - Wrapper for Salesforce CLI commands using `execa`
+   - Progress indicators for long-running operations
+   - Result formatting and display
+
+3. **Performance Optimizations**
+   - Command result caching with automatic invalidation
+   - Efficient rendering with React hooks
+   - Asynchronous operations with loading indicators
+
+4. **State Management**
+   - React Context API for global state
+   - Custom hooks for reusable logic
+   - Consistent patterns across components
+
+---
 
 ## 🛠 Development
 
@@ -81,14 +196,14 @@ sft --version
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/sf-tui.git
+git clone https://github.com/YOUR_GITHUB_USERNAME/sf-tui.git
 cd sf-tui
 
 # Install dependencies
 npm install
 
-# Fix TypeScript type definitions (if needed)
-npm install --save-dev @types/execa @types/react @types/react-dom @types/node
+# Run in development mode with hot-reloading
+npm run dev
 ```
 
 ### Available Scripts
@@ -97,6 +212,10 @@ npm install --save-dev @types/execa @types/react @types/react-dom @types/node
 - `npm run dev` - Run in development mode with hot-reloading
 - `npm test` - Run tests
 - `npm run test:watch` - Run tests in watch mode
+- `npm run test:ui` - Run tests with UI interface
+- `npm run test:coverage` - Run tests with coverage report
+- `npm run test:errors` - Run only error-related tests
+- `npm run test:e2e` - Run end-to-end tests
 - `npm run lint` - Run ESLint
 
 ### Project Structure
@@ -111,10 +230,20 @@ npm install --save-dev @types/execa @types/react @types/react-dom @types/node
     - `metadata/`: Metadata operations
     - `run/`: Code execution tools
     - `plugins/`: Plugin management
+  - `context/`: React context providers
   - `themes/`: Styling and theming
   - `hooks/`: Custom React hooks
   - `utils/`: Utility functions
   - `types/`: TypeScript type definitions
+  - `config/`: Application configuration
+- `tests/`: Test files
+  - `components/`: Component tests
+  - `e2e/`: End-to-end tests
+  - `integration/`: Integration tests
+  - `utils/`: Utility tests
+- `dist/`: Build output
+
+---
 
 ## 🧪 Testing
 
@@ -125,7 +254,14 @@ SF TUI uses a comprehensive testing strategy to ensure code quality and reliabil
 Run unit tests with:
 
 ```bash
+# Run all tests
 npm test
+
+# Run specific test file
+npm test -- path/to/test.test.tsx
+
+# Run tests matching pattern
+npm test -- -t "test pattern"
 ```
 
 Run tests in watch mode during development:
@@ -146,12 +282,18 @@ npm run test:e2e
 DEBUG_E2E=true npm run test:e2e
 ```
 
+### Test Coverage
+
+Generate a test coverage report:
+
+```bash
+npm run test:coverage
+```
+
 ### Writing Tests
 
 - **Unit Tests**: For utility functions and individual components
 - **E2E Tests**: For navigation flows and user interactions
-  - Use the `setupE2E` helper from `tests/e2e/setup.ts`
-  - Test common user flows by sending keyboard inputs and asserting on outputs
 
 Example E2E test:
 
@@ -177,23 +319,7 @@ describe('Navigation Flow', () => {
 });
 ```
 
-### Cache Testing
-
-Test command caching behavior with:
-
-```bash
-npm run test:cache
-```
-
-This runs specialized tests to verify caching, including TTL behavior, invalidation, and size management.
-
-## 🧩 Tech Stack
-
-- **Language**: TypeScript
-- **UI Framework**: [Ink](https://github.com/vadimdemedes/ink) (React for CLIs)
-- **CLI Framework**: [oclif](https://oclif.io/)
-- **Build Tool**: [tsup](https://github.com/egoist/tsup)
-- **Testing**: [Vitest](https://vitest.dev/)
+---
 
 ## 📦 Performance Features
 
@@ -222,6 +348,32 @@ Configure caching in your `~/.sftui/config.json`:
 }
 ```
 
+---
+
+## 🛠️ Troubleshooting
+
+- **App does not start:** Ensure Node.js, npm, and Salesforce CLI are installed and on your PATH.
+- **Config errors:** Delete or fix `~/.sftui/config.json` and restart SF TUI to trigger the setup wizard.
+- **Terminal rendering issues:** Try a different terminal emulator or update your terminal.
+- **Log locations:**
+  - Default user config: `~/.sftui/config.json`
+  - Default logs: `~/.sf-tui/logs/sf-tui.log`
+- **Debug mode:** Run with `DEBUG=* sft` for verbose logs.
+
+---
+
+## 🧩 Tech Stack
+
+- **Language**: TypeScript
+- **UI Framework**: [Ink](https://github.com/vadimdemedes/ink) (React for CLIs)
+- **CLI Framework**: [oclif](https://oclif.io/)
+- **Process Manager**: [execa](https://github.com/sindresorhus/execa)
+- **Build Tool**: [tsup](https://github.com/egoist/tsup)
+- **Testing**: [Vitest](https://vitest.dev/)
+- **Terminal Styling**: [chalk](https://github.com/chalk/chalk)
+
+---
+
 ## 📝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -232,9 +384,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
 
 ## 🙏 Acknowledgments
 

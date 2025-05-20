@@ -61,6 +61,11 @@ type ProgressBarProps = {
    * Additional styles for the progress bar container
    */
   style?: React.CSSProperties;
+  
+  /**
+   * Test ID for testing purposes
+   */
+  testId?: string;
 };
 
 /**
@@ -77,6 +82,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   filledChar = '█',
   unfilledChar = '░',
   style = {},
+  testId = 'progress-bar',
 }) => {
   const theme = useTheme();
   
@@ -124,18 +130,34 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   }, [percentage, showPercentage]);
   
   return (
-    <Box flexDirection="column" style={style}>
+    <Box 
+      flexDirection="column" 
+      style={style}
+      data-testid={testId}
+    >
       {(label || showValue || showPercentage) && (
-        <Box marginBottom={1}>
-          {label && <Text>{label}: </Text>}
-          <Text color={color} bold>
+        <Box 
+          marginBottom={1}
+          data-testid={`${testId}-header`}
+        >
+          {label && <Text data-testid={`${testId}-label`}>{label}: </Text>}
+          <Text 
+            color={color} 
+            bold
+            data-testid={`${testId}-value`}
+          >
             {formattedValue}
             {formattedPercentage}
           </Text>
         </Box>
       )}
-      <Box>
-        <Text color={color}>
+      <Box data-testid={`${testId}-bar-container`}>
+        <Text 
+          color={color}
+          data-testid={`${testId}-bar`}
+          data-variant={variant}
+          data-percentage={percentage.toFixed(1)}
+        >
           {progressBar}
         </Text>
       </Box>

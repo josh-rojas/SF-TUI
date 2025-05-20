@@ -7,34 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Description
 SF TUI is a modern, interactive terminal-based interface for Salesforce development. It provides a user-friendly way to interact with Salesforce CLI commands, making it easier for developers and admins to manage their Salesforce orgs and projects without memorizing complex CLI commands.
 
-## Key Components
+## Key Commands
 
-### Core Features
-- **Org Management**: Connect to and manage multiple Salesforce orgs
-- **Project Tools**: Create and manage Salesforce projects
-- **Authentication**: Secure org authentication flows
-- **Metadata Operations**: Deploy and retrieve metadata
-- **Development Tools**: Execute Apex, Flows, and more
-- **Plugin Management**: View and manage CLI plugins
-
-### Technical Stack
-- **Language**: TypeScript
-- **UI Framework**: Ink (React for CLIs)
-- **CLI Framework**: oclif
-- **Build Tool**: tsup
-- **Testing**: Vitest
-- **Linting/Formatting**: ESLint & Prettier
-
-## Project Structure
-- `src/`: Main source code
-  - `commands/`: CLI command implementations
-  - `components/`: Reusable UI components
-  - `themes/`: Styling and theming
-  - `hooks/`: Custom React hooks
-  - `utils/`: Utility functions
-
-## Development Commands
-
+### Development Workflow
 ```bash
 # Install dependencies
 npm install
@@ -45,149 +20,208 @@ npm run build
 # Run in development mode with hot-reloading
 npm run dev
 
-# Run tests
-npm test
+# Run the app directly
+node dist/index.js
 
-# Run tests in watch mode
-npm run test:watch
-
-# Run linting
+# Format code with ESLint
 npm run lint
-
-# Format code with Prettier
-npm run format
 ```
 
-## Development Plan
+### Testing Commands
+```bash
+# Run all tests
+npm test
 
-### Phase 1: Setup & Foundation (Priority: High) ✅
-1. **Fix TypeScript and Dependency Issues** ✅
-   ```bash
-   # Install missing type definitions
-   npm install --save-dev @types/execa @types/react @types/react-dom @types/node
-   ```
-   - ✅ TextInput component references fixed in MetadataTools, RunTools, and PluginsPanel
-   - ✅ Type errors resolved
+# Run tests in watch mode during development
+npm run test:watch
 
-2. **Implement Basic Component Infrastructure** ✅
-   - ✅ Common component implementations complete (TextInput, Button, etc.)
-   - ✅ Theming support across all components
+# Run tests with coverage report
+npm test -- --coverage
 
-### Phase 2: Core Features Implementation (Priority: High)
-1. **Complete Org Manager** ✅
-   - ✅ Org deletion implementation fixed
-   - ✅ Refresh capability for org list added
-   - ✅ Error handling for failed operations implemented
+# Run specific test patterns
+npm test -- PathToTestFile.test.tsx
+npm test -- -t "test description pattern"
 
-2. **Enhance Metadata Tools** ✅
-   - ✅ Dummy data replaced with actual org loading
-   - ✅ Progress tracking for long-running operations implemented
-   - ✅ Validation for input fields added
+# Run only error-related tests
+npm run test:errors
 
-3. **Improve Run Tools** ✅
-   - ✅ Apex execution implementation completed
-   - ✅ Flow execution support added
-   - ✅ SOQL query results visualization implemented
+# Run end-to-end tests
+npm run test:e2e
 
-4. **Enhance Plugin Management** ✅
-   - ✅ Plugin installation, update, and removal functionality completed
-   - ✅ Plugin search capability added
-   - ✅ Error handling for plugin operations improved
+# Run E2E tests with debug output
+DEBUG_E2E=true npm run test:e2e
+```
 
-### Phase 3: Testing & Documentation (Priority: Medium)
-1. **Testing Infrastructure**
-   - Set up component testing with Vitest
-   - Configure test coverage reporting
-   ```bash
-   # Run tests with coverage
-   npm test -- --coverage
-   ```
-   - Add integration tests for CLI commands
+## Architecture Overview
 
-2. **Documentation**
-   - Add JSDoc comments to all components and utilities
-   - Update README with comprehensive setup instructions
-   - Create contribution guidelines
-   - Document common patterns and best practices
+SF TUI is a React-based Terminal UI application built with the following architecture:
 
-### Phase 4: Finalization & Distribution (Priority: Low)
-1. **CI/CD Setup**
-   - Configure GitHub Actions workflow
-   - Set up automated testing
-   - Configure release process
+1. **Component-Based Structure**
+   - Uses Ink (React for the terminal) to render interactive terminal UI
+   - React components follow functional approach with hooks
+   - Error boundaries prevent UI crashes
 
-2. **Performance Optimization**
-   - Analyze and improve component rendering performance
-   - Optimize CLI command execution
-   - Add caching for frequently accessed data
-
-3. **User Experience Enhancements**
-   - Implement keyboard shortcuts
-   - Add onboarding/help screens
-   - Create a dark mode theme
-
-## Coding Guidelines
-
-1. **Component Structure**
-   - Use functional components with hooks
-   - Keep components focused on a single responsibility
-   - Extract reusable logic into custom hooks
-
-2. **Error Handling**
-   - Always provide meaningful error messages
-   - Use try/catch blocks for async operations
-   - Implement user-friendly error displays
-
-3. **Styling Conventions**
-   - Use the theme system for all styling
-   - Follow the Salesforce Lightning Design System color palette
-   - Maintain consistent spacing and layout
-
-4. **Performance Considerations**
-   - Minimize rerenders with React.memo and useMemo where appropriate
-   - Keep terminal UI responsive by avoiding blocking operations
-   - Use async/await for all file system and network operations
-
-## Technical Requirements
-- Node.js 18 or later
-- npm 9 or later
-- Salesforce CLI (sf) installed and configured
-
-## Architecture
-
-The application follows a component-based architecture using React with Ink for terminal rendering:
-- **Entry point**: `src/index.ts` - Initializes the CLI application
-- **Commands**: `src/commands/` - CLI command implementations
-- **Components**:
-  - `common/`: Reusable UI components
-  - `org/`: Org management components
-  - `project/`: Project tools
-  - `auth/`: Authentication flows
-  - `metadata/`: Metadata operations
-  - `run/`: Code execution tools
-  - `plugins/`: Plugin management
-
-## Core Design Patterns
-
-1. **Error Handling System**
-   - Centralized error reporting via `errorReporter` singleton
-   - Error severity levels and categories to classify issues
-   - User-friendly error notifications with dismissal options
-   - Error boundaries to prevent UI crashes
-
-2. **Logging Infrastructure**
-   - Multi-level logging system (DEBUG, INFO, WARN, ERROR, FATAL)
-   - File and console logging with rotation support
-   - Structured log format with timestamp, level, message, and optional details
-
-3. **Command Execution**
+2. **Command Execution System**
    - Wrapper for Salesforce CLI commands using `execa`
-   - Loading indicators during command execution
-   - Output capture and display
-   - Error handling for failed commands
+   - Provides progress indicators during long-running operations
+   - Captures and formats output for display in the terminal
 
-4. **UI Component Structure**
-   - Common components in `src/components/common/`
-   - Feature-specific components in dedicated directories
-   - React hooks for state management
-   - Consistent navigation with back button support
+3. **Caching Layer**
+   - Caches results of read-only commands to improve performance
+   - Automatically invalidates cache for write operations
+   - Configurable with TTL (time-to-live) and max cache size
+
+4. **Error Handling & Logging**
+   - Centralized error reporting system with severity levels
+   - Robust logging with both console and file output
+   - Log rotation and management for production use
+   - Error recovery mechanism for critical operations
+
+5. **Testing Framework**
+   - Unit tests with Vitest for component and utility testing
+   - E2E tests that verify navigation and command flows
+   - Custom testing utils for terminal UI testing
+
+## Core Data Flows
+
+1. **Command Execution Flow**
+   - User selects command in TUI → Command parameters collected → 
+   - Command execution with loading UI → Results processed → 
+   - Data displayed in appropriate format
+
+2. **Authentication Flow**
+   - Auth requested → OAuth flow initiated → 
+   - Tokens stored securely → Org added to list
+
+3. **Metadata Operation Flow**
+   - Org selection → Metadata type/component selection → 
+   - Action selection (deploy/retrieve) → Command execution → 
+   - Results displayed with success/error state
+
+## Critical Files & Components
+
+- **Entry points:**
+  - `src/index.ts`: Main application entry
+  - `src/App.tsx`: Root React component
+
+- **Core components:**
+  - `src/components/MainMenu.tsx`: Central navigation hub
+  - `src/components/org/OrgManager.tsx`: Org connection & management
+  - `src/components/metadata/MetadataTools.tsx`: Metadata operations
+  - `src/components/run/RunTools.tsx`: SOQL, Apex, etc. execution
+
+- **Important utilities:**
+  - `src/utils/commandExecutor.ts`: Executes Salesforce CLI commands
+  - `src/utils/logger.ts`: Logging system
+  - `src/utils/cache.ts`: Command result caching
+  - `src/utils/errorReporter.ts`: Error handling & reporting
+
+- **Test framework:**
+  - `tests/setup.ts`: Test environment configuration
+  - `tests/e2e/setup.ts`: E2E test utilities
+  - `tests/e2e/e2eUtils.ts`: Support functions for E2E testing
+
+## Guidelines for Code Modifications
+
+1. **Adding New Commands**
+   - Add new command file in `src/commands/`
+   - Update command registry if needed
+   - Add appropriate UI component in `src/components/`
+   - Write tests for both the command and UI
+
+2. **Modifying UI Components**
+   - Follow existing pattern of functional components with hooks
+   - Ensure error boundaries are in place
+   - Use proper theme styling from `src/themes/`
+
+3. **Error Handling**
+   - Use try/catch blocks for async operations
+   - Use the `errorReporter` singleton for consistent error reporting
+   - Add appropriate user-facing error displays
+
+4. **Testing Requirements**
+   - Unit tests for new utils and components
+   - For UI components, test both rendering and interactions
+   - For commands, test with mocked `execa` responses
+   - Add E2E tests for new user-facing flows
+
+5. **Configuration Management**
+   - Honor environment variables for configuration when appropriate
+   - Add validation for configuration parameters
+   - Provide sensible defaults for all configuration settings
+
+## Common Patterns
+
+1. **React Hooks Usage**
+   - Use existing custom hooks in `src/hooks/`
+   - Create new hooks for reusable logic following the pattern
+
+2. **Error Handling Pattern**
+   ```typescript
+   try {
+     // Async operation
+     const result = await someOperation();
+     return result;
+   } catch (error) {
+     // Use the errorReporter or logger
+     errorReporter.reportError({
+       message: "Failed to perform operation",
+       error: error as Error,
+       severity: "error", // or "warning", "critical", etc.
+       context: { additionalInfo: "helpful context" }
+     });
+     
+     // User-facing feedback
+     return { error: "Operation failed. Please try again." };
+   }
+   ```
+
+3. **Command Execution Pattern**
+   ```typescript
+   import { executeCommand } from '../utils/commandExecutor';
+   
+   const result = await executeCommand(
+     'sf', 
+     ['org', 'list', '--json'], 
+     { showOutput: true, cacheResult: true }
+   );
+   ```
+
+4. **E2E Testing Pattern**
+   ```typescript
+   import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+   import { setupE2E } from './setup';
+   
+   describe('Some Feature Flow', () => {
+     let e2e;
+     
+     beforeAll(async () => {
+       e2e = await setupE2E();
+     });
+     
+     afterAll(async () => {
+       await e2e.cleanup();
+     });
+     
+     it('should navigate to target screen and perform action', async () => {
+       await e2e.navigateTo('targetScreen');
+       expect(e2e).toContainOutput('Expected Content');
+       
+       // Simulate user input
+       e2e.sendInput('some input');
+       await e2e.waitForText('Expected Result');
+     });
+   });
+   ```
+
+## Environment Variables
+
+- `SF_TUI_LOG_LEVEL`: Sets logging level (DEBUG, INFO, WARN, ERROR, FATAL)
+- `SF_TUI_CONSOLE_OUTPUT`: Enable/disable console logging (true/false)
+- `SF_TUI_FILE_OUTPUT`: Enable/disable file logging (true/false)
+- `SF_TUI_LOG_FILE`: Custom log file path
+- `SF_TUI_MAX_LOG_FILE_SIZE`: Maximum log file size in bytes
+- `SF_TUI_MAX_LOG_FILES`: Maximum number of rotated log files to keep
+- `DEBUG_E2E`: Enable detailed output during E2E tests
+- `TTY`: Force TTY mode during tests (set to "1")
+- `SFTUI_CONFIG_DIR`: Custom config directory location

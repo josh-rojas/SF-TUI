@@ -1,9 +1,18 @@
 import React, { useState, useCallback } from 'react';
-import { Box, Text, useFocus } from 'ink';
+import { Box, BoxProps, Text } from 'ink';
 import { useTheme } from '../../themes';
 import { Collapsible } from './Collapsible';
 
-type TreeNode = {
+// Extend BoxProps to include ARIA attributes
+interface AccessibleBoxProps extends BoxProps {
+  role?: string;
+  'aria-selected'?: boolean;
+  'data-testid'?: string;
+  'data-selected'?: boolean;
+}
+
+// Define TreeNode interface
+interface TreeNode {
   /**
    * The unique identifier for the node
    */
@@ -48,7 +57,8 @@ type TreeNode = {
   isSelected?: boolean;
 };
 
-type TreeViewProps = {
+// Define TreeViewProps interface
+interface TreeViewProps {
   /**
    * The tree data to display
    */
@@ -57,21 +67,21 @@ type TreeViewProps = {
   /**
    * Callback when a node is selected
    */
-  onSelect?: (node: TreeNode) => void;
+  onSelect: (node: TreeNode) => void;
   
   /**
-   * Callback when a node is toggled (expanded/collapsed)
+   * Callback when a node is expanded/collapsed
    */
-  onToggle?: (node: TreeNode, isExpanded: boolean) => void;
+  onToggle: (node: TreeNode, isExpanded: boolean) => void;
   
   /**
-   * The currently selected node ID
+   * The ID of the currently selected node
    */
   selectedId?: string | null;
   
   /**
-   * The depth of the current level (used internally for indentation)
-   * @internal
+   * The depth of the current level in the tree (used internally for recursion)
+   * @default 0
    */
   depth?: number;
   
@@ -81,12 +91,12 @@ type TreeViewProps = {
   style?: React.CSSProperties;
   
   /**
-   * Additional styles for the node container
+   * Additional styles for each node
    */
   nodeStyle?: React.CSSProperties;
   
   /**
-   * Additional styles for the node label
+   * Additional styles for node labels
    */
   labelStyle?: React.CSSProperties;
   
@@ -94,7 +104,7 @@ type TreeViewProps = {
    * Additional styles for the selected node
    */
   selectedStyle?: React.CSSProperties;
-};
+}
 
 /**
  * A recursive tree view component for displaying hierarchical data
@@ -103,47 +113,42 @@ const TreeView: React.FC<TreeViewProps> = ({
   data,
   onSelect,
   onToggle,
-  selectedId,
+  selectedId = null,
   depth = 0,
   style = {},
-  nodeStyle = {},
-  labelStyle = {},
-  selectedStyle = {},
+  nodeStyle: nodeStyleProp = {},
+  labelStyle: labelStyleProp = {},
+  selectedStyle = { backgroundColor: 'yellow' },
 }) => {
   const theme = useTheme();
   
   // Handle node selection
   const handleSelect = useCallback((node: TreeNode) => {
-    if (node.selectable !== false && onSelect) {
+    if (node.selectable !== false) {
       onSelect(node);
     }
   }, [onSelect]);
   
   // Handle node toggle (expand/collapse)
   const handleToggle = useCallback((node: TreeNode, isExpanded: boolean) => {
-    if (onToggle) {
-      onToggle(node, isExpanded);
-    }
+    onToggle(node, isExpanded);
   }, [onToggle]);
   
   // Render a single tree node
-  const renderNode = (node: TreeNode, index: number) => {
+  const renderNode = (node: TreeNode, index: number): React.ReactNode => {
+    const isSelected = node.id === selectedId;
     const hasChildren = node.children && node.children.length > 0;
-    const isSelected = selectedId === node.id;
-    const indent = depth * 2;
     
     // Default styles
     const defaultNodeStyle: React.CSSProperties = {
-      marginLeft: indent,
+      marginLeft: depth * 2,
       paddingLeft: 1,
       paddingRight: 1,
       ...(node.selectable !== false ? {} : { opacity: 0.7 }),
-      ...nodeStyle,
     };
     
     const defaultLabelStyle: React.CSSProperties = {
       color: isSelected ? theme.colors.primary : theme.colors.text,
-      ...labelStyle,
     };
     
     const selectedNodeStyle: React.CSSProperties = isSelected ? {
@@ -151,84 +156,88 @@ const TreeView: React.FC<TreeViewProps> = ({
       ...selectedStyle,
     } : {};
     
-    // Make a leaf node (no children) selectable with keyboard
-    const handleLeafSelect = () => {
-      if (node.selectable !== false && onSelect) {
-        onSelect(node);
-      }
+    const nodeStyle = {
+      ...defaultNodeStyle,
+      ...(isSelected ? selectedNodeStyle : {}),
+      ...nodeStyleProp,
+      ...(isSelected && selectedStyle ? selectedStyle : {}),
     };
-    
-    // Render a leaf node (no children)
-    if (!hasChildren) {
+
+    const labelStyle = {
+      ...defaultLabelStyle,
+      ...labelStyleProp,
+    };
+
+    // If the node has children, render it as a collapsible
+    if (hasChildren) {
       return (
-        <Box 
+        <Collapsible
           key={node.id || index}
-          borderStyle="none"
-          style={{
-            ...defaultNodeStyle,
-            ...selectedNodeStyle,
+          title={
+            <Text style={labelStyle}>
+              {node.icon && <Text>{node.icon} </Text>}
+              {node.label}
+            </Text>
+          }
+          defaultExpanded={node.isExpanded ?? false}
+          onToggle={(isExpanded) => handleToggle(node, isExpanded)}
+          headerStyle={{
+            ...nodeStyle,
+            paddingLeft: 0,
           }}
+          contentStyle={{
+            paddingLeft: 0,
+          }}
+          data-testid={`collapsible-${node.id}`}
         >
-          <Text 
-            style={defaultLabelStyle}
-            // Use Ink's native focus handling instead of onClick
-            dimColor={!isSelected}
-          >
-            {node.icon && <Text>{node.icon} </Text>}
-            <Text>{node.label}</Text>
-            {/* Add an invisible character for focusing that triggers selection */}
-            {node.selectable !== false && (
-              <Text
-                color="transparent"
-                dimColor
-                onFocus={() => isSelected || handleSelect(node)}
-              >
-                •
-              </Text>
-            )}
-          </Text>
-        </Box>
+          <TreeView
+            data={node.children || []}
+            onSelect={onSelect}
+            onToggle={onToggle}
+            selectedId={selectedId}
+            depth={depth + 1}
+            style={style}
+            nodeStyle={nodeStyleProp}
+            labelStyle={labelStyleProp}
+            selectedStyle={selectedStyle}
+          />
+        </Collapsible>
       );
     }
-    
-    // Render a parent node with children
+
+    // Render a leaf node
     return (
-      <Collapsible
+      <Box 
         key={node.id || index}
-        title={
-          <Text style={defaultLabelStyle}>
-            {node.icon && <Text>{node.icon} </Text>}
-            {node.label}
-          </Text>
-        }
-        defaultExpanded={node.isExpanded}
-        onToggle={(isExpanded) => handleToggle(node, isExpanded)}
-        headerStyle={{
-          ...defaultNodeStyle,
-          ...(isSelected ? selectedNodeStyle : {}),
-          paddingLeft: 0,
-        }}
-        contentStyle={{
-          paddingLeft: 0,
-        }}
+        borderStyle="none"
+        style={nodeStyle}
+        {...{
+          'role': 'treeitem',
+          'aria-selected': isSelected,
+          'data-testid': `tree-item-${node.id}`,
+          'data-selected': isSelected
+        } as AccessibleBoxProps}
       >
-        <TreeView
-          data={node.children || []}
-          onSelect={onSelect}
-          onToggle={onToggle}
-          selectedId={selectedId}
-          depth={depth + 1}
-          style={style}
-          nodeStyle={nodeStyle}
-          labelStyle={labelStyle}
-          selectedStyle={selectedStyle}
-        />
-      </Collapsible>
+        <Text 
+          style={labelStyle}
+          onClick={() => handleSelect(node)}
+        >
+          {node.icon && <Text>{node.icon} </Text>}
+          {node.label}
+        </Text>
+      </Box>
     );
   };
-  
+
   return (
-    <Box flexDirection="column" style={style}>
+    <Box 
+      flexDirection="column" 
+      style={style}
+      {...{
+        'role': 'tree',
+        'data-testid': 'tree-view'
+      } as AccessibleBoxProps}
+    >
       {data.map((node, index) => renderNode(node, index))}
     </Box>
   );

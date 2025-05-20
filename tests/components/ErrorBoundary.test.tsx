@@ -5,25 +5,26 @@ import ErrorBoundary from '../../src/components/common/ErrorBoundary';
 import { createInkMock } from '../testUtils';
 
 // Mock errorReporter
-vi.mock('../../src/utils/errorReporter', () => {
-  return {
-    errorReporter: {
-      reportError: vi.fn().mockReturnValue({ id: 'mock-error-id' }),
-      getError: vi.fn().mockReturnValue({
-        id: 'mock-error-id',
-        message: 'Error from boundary',
-        severity: 'HIGH',
-        category: 'UI',
-      }),
-    },
-    ErrorSeverity: {
-      HIGH: 'HIGH',
-    },
-    ErrorCategory: {
-      UI: 'UI',
-    },
-  };
+const mockReportError = vi.fn().mockReturnValue({ id: 'mock-error-id' });
+const mockGetError = vi.fn().mockReturnValue({
+  id: 'mock-error-id',
+  message: 'Error from boundary',
+  severity: 'HIGH',
+  category: 'UI',
 });
+
+vi.mock('../../src/utils/errorReporter', () => ({
+  errorReporter: {
+    reportError: mockReportError,
+    getError: mockGetError,
+  },
+  ErrorSeverity: {
+    HIGH: 'HIGH',
+  },
+  ErrorCategory: {
+    UI: 'UI',
+  },
+}));
 
 // Mock ErrorNotification component
 vi.mock('../../src/components/common/ErrorNotification', () => {
@@ -41,19 +42,20 @@ createInkMock();
 
 // Component that throws an error
 class Thrower extends React.Component {
-  render() {
+  render(): React.ReactNode {
     throw new Error('Test error');
+    return null; // This line is unreachable but satisfies TypeScript
   }
 }
 
 // Component that throws an error in a lifecycle method
-class LifecycleThrower extends React.Component {
-  componentDidMount() {
+class LifecycleThrower extends React.Component<{}, {}> {
+  componentDidMount(): void {
     throw new Error('Lifecycle error');
   }
   
-  render() {
-    return <div>Content that should not render</div>;
+  render(): React.ReactNode {
+    return <div>Lifecycle Thrower</div>;
   }
 }
 
