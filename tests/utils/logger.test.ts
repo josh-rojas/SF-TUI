@@ -4,17 +4,8 @@ import path from 'path';
 import os from 'os';
 
 // Mock fs module
-vi.mock('fs', async () => {
-  return {
-    default: {
-      existsSync: vi.fn(),
-      statSync: vi.fn(),
-      mkdirSync: vi.fn(),
-      appendFileSync: vi.fn(),
-      writeFileSync: vi.fn(),
-      unlinkSync: vi.fn(),
-      renameSync: vi.fn(),
-    },
+vi.mock('fs', () => ({
+  default: {
     existsSync: vi.fn(),
     statSync: vi.fn(),
     mkdirSync: vi.fn(),
@@ -22,8 +13,8 @@ vi.mock('fs', async () => {
     writeFileSync: vi.fn(),
     unlinkSync: vi.fn(),
     renameSync: vi.fn(),
-  };
-});
+  },
+}));
 
 // Mock console
 vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -60,6 +51,7 @@ describe('Logger', () => {
     
     // Mock fs.existsSync to return true for log directory
     (fs.existsSync as any).mockImplementation((path: string) => {
+      if (path === path.dirname(tempLogPath)) return true;
       if (path === tempLogPath) return false;
       return true;
     });
@@ -79,12 +71,13 @@ describe('Logger', () => {
     });
     
     // Verify mkdirSync was called
-    expect(fs.mkdirSync).toHaveBeenCalled();
+    expect(fs.mkdirSync).toHaveBeenCalledWith(path.dirname(tempLogPath), { recursive: true });
   });
   
-  it('should log debug messages', () => {
+  it('should log debug messages', async () => {
     const message = 'Debug message';
     logger.debug(message);
+    await new Promise(resolve => setTimeout(resolve, 100)); // allow for async file write
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -96,9 +89,10 @@ describe('Logger', () => {
     );
   });
   
-  it('should log info messages', () => {
+  it('should log info messages', async () => {
     const message = 'Info message';
     logger.info(message);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -110,9 +104,10 @@ describe('Logger', () => {
     );
   });
   
-  it('should log warning messages', () => {
+  it('should log warning messages', async () => {
     const message = 'Warning message';
     logger.warn(message);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -124,9 +119,10 @@ describe('Logger', () => {
     );
   });
   
-  it('should log error messages', () => {
+  it('should log error messages', async () => {
     const message = 'Error message';
     logger.error(message);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -138,9 +134,10 @@ describe('Logger', () => {
     );
   });
   
-  it('should log fatal messages', () => {
+  it('should log fatal messages', async () => {
     const message = 'Fatal message';
     logger.fatal(message);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -152,10 +149,11 @@ describe('Logger', () => {
     );
   });
   
-  it('should include error stack trace in logs', () => {
+  it('should include error stack trace in logs', async () => {
     const message = 'Error with stack trace';
     const error = new Error('Test error');
     logger.error(message, {}, error);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -167,10 +165,11 @@ describe('Logger', () => {
     );
   });
   
-  it('should include details in logs', () => {
+  it('should include details in logs', async () => {
     const message = 'Message with details';
     const details = { key: 'value', count: 42 };
     logger.info(message, details);
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was called
     expect(console.log).toHaveBeenCalled();
@@ -182,7 +181,7 @@ describe('Logger', () => {
     );
   });
   
-  it('should not log messages below configured level', () => {
+  it('should not log messages below configured level', async () => {
     // Configure logger to only log ERROR and higher
     logger.configure({
       logLevel: LogLevel.ERROR,
@@ -191,6 +190,7 @@ describe('Logger', () => {
     logger.debug('Debug message');
     logger.info('Info message');
     logger.warn('Warning message');
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.log was not called for these levels
     expect(console.log).not.toHaveBeenCalled();
@@ -198,11 +198,12 @@ describe('Logger', () => {
     
     // Verify that ERROR level is still logged
     logger.error('Error message');
+    await new Promise(resolve => setTimeout(resolve, 100));
     expect(console.log).toHaveBeenCalled();
     expect(fs.appendFileSync).toHaveBeenCalled();
   });
   
-  it('should check log rotation when writing to file', () => {
+  it('should check log rotation when writing to file', async () => {
     // Mock fs.existsSync and fs.statSync for log rotation
     (fs.existsSync as any).mockReturnValueOnce(true);
     (fs.statSync as any).mockReturnValueOnce({ size: 10 * 1024 * 1024 }); // 10MB
@@ -212,13 +213,14 @@ describe('Logger', () => {
     });
     
     logger.info('Log message');
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify that log rotation was attempted
     expect(fs.existsSync).toHaveBeenCalledWith(tempLogPath);
     expect(fs.statSync).toHaveBeenCalledWith(tempLogPath);
   });
   
-  it('should rotate logs when file size exceeds max size', () => {
+  it('should rotate logs when file size exceeds max size', async () => {
     // Mock fs.existsSync and fs.statSync for log rotation
     (fs.existsSync as any).mockReturnValueOnce(true);
     (fs.statSync as any).mockReturnValueOnce({ size: 10 * 1024 * 1024 }); // 10MB
@@ -229,17 +231,19 @@ describe('Logger', () => {
     });
     
     logger.info('Log message');
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify that log rotation was performed
     expect(fs.renameSync).toHaveBeenCalled();
     expect(fs.writeFileSync).toHaveBeenCalledWith(tempLogPath, '');
   });
   
-  it('should clear logs when requested', () => {
+  it('should clear logs when requested', async () => {
     // Mock fs.existsSync for clearLogs
     (fs.existsSync as any).mockReturnValueOnce(true);
     
     logger.clearLogs();
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify that writeFileSync was called to clear the log file
     expect(fs.writeFileSync).toHaveBeenCalledWith(tempLogPath, '');
@@ -269,7 +273,7 @@ describe('Logger', () => {
     expect(fs.appendFileSync).not.toHaveBeenCalled();
   });
   
-  it('should handle errors when writing to log file', () => {
+  it('should handle errors when writing to file', async () => {
     // Mock fs.appendFileSync to throw an error
     (fs.appendFileSync as any).mockImplementationOnce(() => {
       throw new Error('Cannot write to file');
@@ -277,50 +281,51 @@ describe('Logger', () => {
     
     // Log a message
     logger.info('Test message');
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Verify console.error was called
     expect(console.error).toHaveBeenCalled();
   });
-});
 
-describe('handleError utility function', () => {
-  it('should log errors and return an Error object', () => {
-    const error = new Error('Test error');
-    const context = 'TestContext';
-    const details = { key: 'value' };
+  describe('handleError utility function', () => {
+    it('should log errors and return an Error object', () => {
+      const error = new Error('Test error');
+      const context = 'TestContext';
+      const details = { key: 'value' };
+
+      // Spy on logger.error
+      const errorSpy = vi.spyOn(logger, 'error');
+
+      // Call handleError
+      const result = handleError(error, context, details);
+
+      // Verify logger.error was called with correct arguments
+      expect(errorSpy).toHaveBeenCalledWith(
+        '[TestContext] Test error',
+        details,
+        error
+      );
+
+      // Verify that an Error object was returned
+      expect(result).toBeInstanceOf(Error);
+      expect(result.message).toBe('Test error');
+    });
     
-    // Spy on logger.error
-    const errorSpy = vi.spyOn(logger, 'error');
-    
-    // Call handleError
-    const result = handleError(error, context, details);
-    
-    // Verify logger.error was called with correct arguments
-    expect(errorSpy).toHaveBeenCalledWith(
-      '[TestContext] Test error',
-      details,
-      error
-    );
-    
-    // Verify that an Error object was returned
-    expect(result).toBeInstanceOf(Error);
-    expect(result.message).toBe('Test error');
-  });
-  
-  it('should convert non-Error objects to Error objects', () => {
-    const errorMessage = 'This is a string error';
-    
-    // Spy on logger.error
-    const errorSpy = vi.spyOn(logger, 'error');
-    
-    // Call handleError with a string
-    const result = handleError(errorMessage);
-    
-    // Verify logger.error was called
-    expect(errorSpy).toHaveBeenCalled();
-    
-    // Verify that an Error object was returned
-    expect(result).toBeInstanceOf(Error);
-    expect(result.message).toBe(errorMessage);
+    it('should convert non-Error objects to Error objects', () => {
+      const errorMessage = 'This is a string error';
+
+      // Spy on logger.error
+      const errorSpy = vi.spyOn(logger, 'error');
+
+      // Call handleError with a string
+      const result = handleError(errorMessage);
+
+      // Verify logger.error was called
+      expect(errorSpy).toHaveBeenCalled();
+
+      // Verify that an Error object was returned
+      expect(result).toBeInstanceOf(Error);
+      expect(result.message).toBe(errorMessage);
+    });
   });
 });

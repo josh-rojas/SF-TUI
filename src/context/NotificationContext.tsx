@@ -27,6 +27,7 @@ export interface Notification {
 // Context type
 interface NotificationContextType {
   notifications: Notification[];
+  visibleNotifications: string[];
   showNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => string;
   updateNotification: (id: string, updates: Partial<Notification>) => void;
   dismissNotification: (id: string) => void;
@@ -36,6 +37,7 @@ interface NotificationContextType {
 // Create context
 const NotificationContext = createContext<NotificationContextType>({
   notifications: [],
+  visibleNotifications: [],
   showNotification: () => '',
   updateNotification: () => {},
   dismissNotification: () => {},
@@ -113,6 +115,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   return (
     <NotificationContext.Provider value={{
       notifications,
+      visibleNotifications,
       showNotification,
       updateNotification,
       dismissNotification,
@@ -134,17 +137,8 @@ export const useNotifications = () => {
 
 // Notification renderer component
 export const NotificationCenter: React.FC = () => {
-  const { notifications, dismissNotification } = useNotifications();
-  const [visibleNotifications, setVisibleNotifications] = useState<string[]>([]);
+  const { notifications, visibleNotifications, dismissNotification } = useNotifications();
   const theme = useTheme();
-
-  useEffect(() => {
-    // Update the list of visible notifications based on new notifications
-    setVisibleNotifications(prevVisible => {
-      const currentIds = notifications.map(n => n.id);
-      return [...prevVisible.filter(id => currentIds.includes(id)), ...currentIds.filter(id => !prevVisible.includes(id))];
-    });
-  }, [notifications]);
 
   // Get notification color based on type
   const getNotificationColor = (type: NotificationType) => {

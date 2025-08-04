@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import fs from 'fs-extra'; // fs-extra is still needed for ensureDir and appendFile by Logger itself
+import fs from 'fs';
 import path from 'path';
 import { defaultLoggerConfig, validateLoggerConfig, LoggerConfig as ExternalLoggerConfig } from '../config/loggerConfig';
 import { LogFormatter, LogDetails as FormatterLogDetails } from './logFormatter';
@@ -112,12 +112,13 @@ class Logger {
    * If directory creation fails, disables file output.
    * @private
    */
-  private async ensureLogDirectory(): Promise<void> {
+  private ensureLogDirectory(): void {
     if (this.config.fileOutput && this.config.logFilePath) {
       const logDir = path.dirname(this.config.logFilePath);
       try {
-        // Ensure directory exists with specific permissions (0o700: user rwx, no group/other access)
-        await fs.ensureDir(logDir, { mode: 0o700 });
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+        }
       } catch (error) {
         console.error(`Failed to create log directory '${logDir}': ${error instanceof Error ? error.message : String(error)}. Disabling file output.`);
         this.config.fileOutput = false;
@@ -202,8 +203,8 @@ class Logger {
     if (!this.config.fileOutput) {
         this.isFlushing = false;
         // Consider logging a message that file output was disabled during rotation attempt
-        if (entriesToFlush.length > 0) {
-            console.warn(`[Logger] File output disabled during log rotation attempt. ${entriesToFlush.length} log entries in queue will not be written to file.`);
+        if (this.logQueue.length > 0) {
+            console.warn(`[Logger] File output disabled during log rotation attempt. ${this.logQueue.length} log entries in queue will not be written to file.`);
             this.logQueue = []; // Clear queue as entries won't be written
         }
         return;
@@ -215,7 +216,7 @@ class Logger {
     const formattedEntries = entriesToFlush.map(e => this.formatter.format(e) + '\n').join('');
 
     try {
-      await fs.appendFile(this.config.logFilePath, formattedEntries);
+      fs.appendFileSync(this.config.logFilePath, formattedEntries);
     } catch (error) {
       console.error(`Failed to write to log file '${this.config.logFilePath}': ${error instanceof Error ? error.message : String(error)}. Entries lost: ${entriesToFlush.length}`);
       // Optionally, re-queue or handle lost entries, e.g., try to log to console if not already
@@ -381,7 +382,7 @@ class Logger {
       try {
         // Ensure queue is flushed before clearing
         await this.flushQueue();
-        await fs.writeFile(this.config.logFilePath, '');
+        fs.writeFileSync(this.config.logFilePath, '');
         logger.info('Log file cleared.');
       } catch (error) {
         console.error(`Failed to clear log file '${this.config.logFilePath}': ${error instanceof Error ? error.message : String(error)}`);
