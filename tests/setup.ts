@@ -30,14 +30,18 @@ vi.mock('ink-spinner', () => {
   };
 });
 
-// Mock ink module to avoid ESM issues
-vi.mock('ink', () => {
+// Mock ink module to render to DOM-compatible elements for testing-library
+vi.mock('ink', async () => {
+  const actual = await vi.importActual('ink');
+  const React = await import('react');
+
   return {
-    default: vi.fn(),
-    Box: vi.fn(({ children }) => ({ type: 'div', props: { children } })),
-    Text: vi.fn(({ children }) => ({ type: 'span', props: { children } })),
+    ...actual,
+    // Simple mocks for Ink components that render as divs and spans
+    Text: (props: { children: React.ReactNode }) => React.createElement('span', props, props.children),
+    Box: (props: { children: React.ReactNode }) => React.createElement('div', props, props.children),
     useApp: vi.fn(() => ({ exit: vi.fn() })),
-    useInput: vi.fn((callback) => {}),
+    useInput: vi.fn(() => {}),
     useFocus: vi.fn(() => ({ isFocused: false })),
     render: vi.fn().mockReturnValue({
       unmount: vi.fn(),
@@ -48,72 +52,37 @@ vi.mock('ink', () => {
 
 // Mock chalk to avoid ESM issues
 vi.mock('chalk', () => {
-  const createChalkMock = () => {
-    const chalk = (str: string) => str;
-    chalk.bold = createChalkMock();
-    chalk.green = createChalkMock();
-    chalk.red = createChalkMock();
-    chalk.yellow = createChalkMock();
-    chalk.blue = createChalkMock();
-    chalk.cyan = createChalkMock();
-    chalk.magenta = createChalkMock();
-    chalk.white = createChalkMock();
-    chalk.gray = createChalkMock();
-    chalk.grey = createChalkMock();
-    chalk.black = createChalkMock();
-    chalk.bold.green = createChalkMock();
-    chalk.bold.red = createChalkMock();
-    chalk.bold.yellow = createChalkMock();
-    chalk.bold.blue = createChalkMock();
-    chalk.bold.cyan = createChalkMock();
-    chalk.bold.magenta = createChalkMock();
-    chalk.bold.white = createChalkMock();
-    chalk.bold.gray = createChalkMock();
-    chalk.bold.grey = createChalkMock();
-    chalk.bold.black = createChalkMock();
-    return chalk;
-  };
-  
-  return {
-    default: createChalkMock()
-  };
-});
-
-// Mock execa for all tests
-const mockExeca = vi.fn().mockImplementation((command, args = [], options = {}) => {
-  return Promise.resolve({
-    command: `${command} ${args.join(' ')}`,
-    exitCode: 0,
-    stdout: Buffer.from('mock stdout'),
-    stderr: Buffer.from(''),
-    // Add common properties an ExecaChildProcess might have
-    kill: vi.fn(),
-    cancel: vi.fn(),
-    then: (onFulfilled, onRejected) => Promise.resolve({
-      exitCode: 0,
-      stdout: 'mock stdout',
-      stderr: '',
-    }).then(onFulfilled, onRejected),
-    catch: (onRejected) => Promise.resolve({
-      exitCode: 0,
-      stdout: 'mock stdout',
-      stderr: '',
-    }).catch(onRejected),
-    finally: (onFinally) => Promise.resolve({
-      exitCode: 0,
-      stdout: 'mock stdout',
-      stderr: '',
-    }).finally(onFinally),
+  // This proxy-based mock is designed to handle chained calls (e.g., chalk.bold.red)
+  // as well as methods like chalk.hex('#FFF')('text').
+  const chalkMock = new Proxy(function(str: string) { return str; }, {
+    get(target, prop) {
+      if (prop === 'hex' || prop === 'bgHex') {
+        // Handle chalk.hex(color)(text) and chalk.bgHex(color)(text)
+        return (color: string) => chalkMock;
+      }
+      // For any other property, return the proxy itself to allow chaining
+      return chalkMock;
+    },
+    apply(target, thisArg, argumentsList) {
+      // When the proxy is called as a function, just return the first argument (the string).
+      return argumentsList[0];
+    }
   });
-});
 
-vi.mock('execa', async () => {
   return {
-    execa: mockExeca,
-    default: mockExeca,
-    ExecaChildProcess: class {}
+    default: chalkMock,
   };
 });
+
+// Mock execa for all tests. This is exported so that tests can import it
+// and use mockImplementationOnce, mockResolvedValue, etc.
+export const mockExeca = vi.fn();
+
+vi.mock('execa', () => ({
+  execa: mockExeca,
+  default: mockExeca,
+  ExecaChildProcess: class {},
+}));
 
 // Fix global TypeScript types for tests
 declare global {
@@ -204,9 +173,22 @@ beforeAll(() => {
   // Add any global variables or configurations for tests
 });
 
+// Setup default mock implementations before each test
+beforeEach(() => {
+  // Provide a default successful mock for execa that can be overridden in tests
+  mockExeca.mockResolvedValue({
+    stdout: 'mock stdout',
+    stderr: '',
+    exitCode: 0,
+    command: 'mock command',
+  });
+});
+
 // Clean up after each test
 afterEach(() => {
   vi.clearAllMocks();
+  // Reset the execa mock to clear calls and implementations between tests
+  mockExeca.mockReset();
 });
 
 // Restore original methods after all tests

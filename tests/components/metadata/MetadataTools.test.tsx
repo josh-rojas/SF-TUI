@@ -11,29 +11,31 @@ type MetadataToolsProps = {
 // Setup mock Ink environment before tests
 // mockInk();
 
-// Create a mock implementation of MetadataTools
-const MockMetadataTools = ({ onBack }: MetadataToolsProps): JSX.Element => (
-  <div data-testid="metadata-tools">
-    <div data-testid="tool-deploy" onClick={onBack}>
-      Deploy Metadata
-    </div>
-    <div data-testid="tool-retrieve" onClick={onBack}>
-      Retrieve Metadata
-    </div>
-    <div data-testid="back-button" onClick={onBack}>
-      ← Back
-    </div>
-  </div>
-);
-
 // Mock the module with proper typing
-vi.mock('../../../src/components/metadata/MetadataTools', () => ({
-  __esModule: true,
-  default: ({ onBack }: { onBack: () => void }) => (
-    <div data-testid="error-boundary">Mock Error Boundary</div>
-  ),
-  MetadataTools: MockMetadataTools,
-}));
+vi.mock('../../../src/components/metadata/MetadataTools', () => {
+  // Define the mock component inside the factory to avoid hoisting issues
+  const MockMetadataTools = ({ onBack }: MetadataToolsProps): JSX.Element => (
+    <div data-testid="metadata-tools">
+      <div data-testid="tool-deploy" onClick={onBack}>
+        Deploy Metadata
+      </div>
+      <div data-testid="tool-retrieve" onClick={onBack}>
+        Retrieve Metadata
+      </div>
+      <div data-testid="back-button" onClick={onBack}>
+        ← Back
+      </div>
+    </div>
+  );
+
+  return {
+    __esModule: true,
+    default: ({ onBack }: { onBack: () => void }) => (
+      <div data-testid="error-boundary">Mock Error Boundary</div>
+    ),
+    MetadataTools: MockMetadataTools,
+  };
+});
 
 // Add type declaration for the mock
 const mockedMetadataTools = vi.mocked(MetadataTools);

@@ -6,40 +6,24 @@ import ErrorProvider, { useErrors } from '../../src/components/common/ErrorProvi
 import { ErrorSeverity, ErrorCategory } from '../../src/utils/errorReporter';
 import { createInkMock } from '../testUtils';
 
-// Create a mock for errorReporter
-const mockSubscribe = vi.fn();
-const mockErrorReporter = {
-  subscribe: mockSubscribe,
-  markAsHandled: vi.fn(),
-  getAllErrors: vi.fn().mockReturnValue([]),
-  clearErrors: vi.fn(),
-  submitFeedback: vi.fn(),
-  reportError: vi.fn(),
-  shutdown: vi.fn(),
-};
+// Declare mock variables to be used in tests and mock factory
+let mockSubscribe: any;
+let mockErrorReporter: any;
 
 // Mock errorReporter module
-vi.mock('../../src/utils/errorReporter', () => ({
-  __esModule: true,
-  ...jest.requireActual('../../src/utils/errorReporter'),
-  errorReporter: mockErrorReporter,
-  ErrorSeverity: {
-    LOW: 'LOW',
-    MEDIUM: 'MEDIUM',
-    HIGH: 'HIGH',
-    CRITICAL: 'CRITICAL',
-  },
-  ErrorCategory: {
-    UI: 'UI',
-    NETWORK: 'NETWORK',
-    FILESYSTEM: 'FILESYSTEM',
-    COMMAND: 'COMMAND',
-    AUTH: 'AUTH',
-    PLUGIN: 'PLUGIN',
-    VALIDATION: 'VALIDATION',
-    UNKNOWN: 'UNKNOWN',
-  },
-}));
+vi.mock('../../src/utils/errorReporter', async () => {
+  const actual = await vi.importActual<typeof import('../../src/utils/errorReporter')>('../../src/utils/errorReporter');
+  return {
+    ...actual,
+    __esModule: true,
+    // Use the hoisted variables in the mock
+    errorReporter: {
+      ...actual.errorReporter,
+      ...mockErrorReporter,
+      subscribe: mockSubscribe,
+    },
+  };
+});
 
 // Mock ErrorNotification component
 vi.mock('../../src/components/common/ErrorNotification', () => {
@@ -55,9 +39,6 @@ vi.mock('../../src/components/common/ErrorNotification', () => {
 
 // Create an Ink mock
 createInkMock();
-
-// Make the mock available for tests
-export { mockErrorReporter, mockSubscribe };
 
 // Test component that uses the useErrors hook
 const ErrorDisplay = () => {
@@ -79,9 +60,20 @@ const ErrorDisplay = () => {
 
 describe('ErrorProvider', () => {
   beforeEach(() => {
+    // Initialize mock variables before each test
+    mockSubscribe = vi.fn();
+    mockErrorReporter = {
+      subscribe: mockSubscribe,
+      markAsHandled: vi.fn(),
+      getAllErrors: vi.fn().mockReturnValue([]),
+      clearErrors: vi.fn(),
+      submitFeedback: vi.fn(),
+      reportError: vi.fn(),
+      shutdown: vi.fn(),
+    };
     vi.clearAllMocks();
   });
-  
+
   it('should subscribe to error reporter on mount', () => {
     const { errorReporter } = require('../../src/utils/errorReporter');
     

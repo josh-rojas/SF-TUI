@@ -5,26 +5,28 @@ import ErrorBoundary from '../../src/components/common/ErrorBoundary';
 import { createInkMock } from '../testUtils';
 
 // Mock errorReporter
-const mockReportError = vi.fn().mockReturnValue({ id: 'mock-error-id' });
-const mockGetError = vi.fn().mockReturnValue({
-  id: 'mock-error-id',
-  message: 'Error from boundary',
-  severity: 'HIGH',
-  category: 'UI',
-});
+vi.mock('../../src/utils/errorReporter', () => {
+  const mockReportError = vi.fn().mockReturnValue({ id: 'mock-error-id' });
+  const mockGetError = vi.fn().mockReturnValue({
+    id: 'mock-error-id',
+    message: 'Error from boundary',
+    severity: 'HIGH',
+    category: 'UI',
+  });
 
-vi.mock('../../src/utils/errorReporter', () => ({
-  errorReporter: {
-    reportError: mockReportError,
-    getError: mockGetError,
-  },
-  ErrorSeverity: {
-    HIGH: 'HIGH',
-  },
-  ErrorCategory: {
-    UI: 'UI',
-  },
-}));
+  return {
+    errorReporter: {
+      reportError: mockReportError,
+      getError: mockGetError,
+    },
+    ErrorSeverity: {
+      HIGH: 'HIGH',
+    },
+    ErrorCategory: {
+      UI: 'UI',
+    },
+  };
+});
 
 // Mock ErrorNotification component
 vi.mock('../../src/components/common/ErrorNotification', () => {

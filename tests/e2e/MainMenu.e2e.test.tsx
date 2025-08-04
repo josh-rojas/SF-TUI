@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import SelectInput from 'ink-select-input';
 import { MainMenu } from '../../src/components/MainMenu';
 import { createE2ETestEnvironment, renderForE2E } from './e2eUtils';
 
@@ -112,8 +113,7 @@ describe('MainMenu E2E Tests', () => {
     const orgManagerItem = getByText(/Org Manager/);
     
     // Simulate selecting Org Manager
-    const selectInput = require('ink-select-input').default;
-    const onSelect = selectInput.mock.calls[0][0].onSelect;
+    const onSelect = vi.mocked(SelectInput).mock.calls[0][0].onSelect;
     
     // Call the onSelect with the org item value
     onSelect({ value: 'org' });
@@ -126,8 +126,7 @@ describe('MainMenu E2E Tests', () => {
     renderForE2E(<MainMenu />);
     
     // Find the Exit menu item and select it
-    const selectInput = require('ink-select-input').default;
-    const onSelect = selectInput.mock.calls[0][0].onSelect;
+    const onSelect = vi.mocked(SelectInput).mock.calls[0][0].onSelect;
     
     // Call the onSelect with the exit item value
     onSelect({ value: 'exit' });
@@ -140,8 +139,7 @@ describe('MainMenu E2E Tests', () => {
     const { getByText, findByTestId, queryByTestId } = renderForE2E(<MainMenu />);
     
     // First navigate to OrgManager
-    const selectInput = require('ink-select-input').default;
-    const onSelect = selectInput.mock.calls[0][0].onSelect;
+    const onSelect = vi.mocked(SelectInput).mock.calls[0][0].onSelect;
     onSelect({ value: 'org' });
     
     // OrgManager should be rendered
@@ -159,8 +157,7 @@ describe('MainMenu E2E Tests', () => {
     const { findByTestId } = renderForE2E(<MainMenu />);
     
     // Get the select handler
-    const selectInput = require('ink-select-input').default;
-    const onSelect = selectInput.mock.calls[0][0].onSelect;
+    const onSelect = vi.mocked(SelectInput).mock.calls[0][0].onSelect;
     
     // Navigate to OrgManager
     onSelect({ value: 'org' });
