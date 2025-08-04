@@ -2,6 +2,26 @@ import React from 'react';
 import { vi } from 'vitest';
 import { EventEmitter } from 'events';
 
+// Mock ink-select-input for E2E tests
+const mockSelectInput = vi.fn(({ items, onSelect }) => {
+  return React.createElement(
+    'div',
+    { 'data-testid': 'mock-select-input' },
+    items.map((item: any) => {
+      return React.createElement(
+        'div',
+        { key: item.value, onClick: () => onSelect(item) },
+        item.label
+      );
+    })
+  );
+});
+
+vi.mock('ink-select-input', () => ({
+  default: mockSelectInput,
+  __esModule: true,
+}));
+
 // We don't need to import ink's render because we're mocking it in setup.ts
 // But we keep a reference here to maintain the API of this utility
 const inkRender = vi.fn().mockReturnValue({

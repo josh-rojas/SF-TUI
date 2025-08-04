@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { useInput } from 'ink';
 import { createE2ETestEnvironment, renderForE2E } from './e2eUtils';
 import ErrorProvider from '../../src/components/common/ErrorProvider';
 import { errorReporter, ErrorSeverity, ErrorCategory } from '../../src/utils/errorReporter';
@@ -93,8 +94,7 @@ describe('Error Handling E2E Tests', () => {
     const button = getByText('Report Error');
     
     // Get input handler
-    const useInputMock = require('ink').useInput;
-    const inputHandler = useInputMock.mock.calls[0][0];
+    const inputHandler = vi.mocked(useInput).mock.calls[0][0];
     
     // Simulate pressing Enter to click the button
     inputHandler('', { return: true });

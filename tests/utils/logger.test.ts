@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { logger, LogLevel } from '../../src/utils/logger';
 
 // Mock fs module
 vi.mock('fs', async () => {
@@ -33,9 +32,21 @@ vi.spyOn(console, 'warn').mockImplementation(() => {});
 vi.spyOn(console, 'info').mockImplementation(() => {});
 
 describe('Logger', () => {
+  let logger: any;
+  let LogLevel: any;
+  let handleError: any;
   const tempLogPath = path.join(os.tmpdir(), 'sf-tui-test.log');
   
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Reset modules to ensure we get a fresh logger instance with mocked fs
+    vi.resetModules();
+
+    // Dynamically import the logger after mocks are set up
+    const loggerModule = await import('../../src/utils/logger');
+    logger = loggerModule.logger;
+    LogLevel = loggerModule.LogLevel;
+    handleError = loggerModule.handleError;
+
     // Reset mocks
     vi.clearAllMocks();
     
@@ -274,7 +285,6 @@ describe('Logger', () => {
 
 describe('handleError utility function', () => {
   it('should log errors and return an Error object', () => {
-    const { handleError } = require('../../src/utils/logger');
     const error = new Error('Test error');
     const context = 'TestContext';
     const details = { key: 'value' };
@@ -298,7 +308,6 @@ describe('handleError utility function', () => {
   });
   
   it('should convert non-Error objects to Error objects', () => {
-    const { handleError } = require('../../src/utils/logger');
     const errorMessage = 'This is a string error';
     
     // Spy on logger.error
