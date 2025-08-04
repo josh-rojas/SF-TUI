@@ -129,10 +129,7 @@ const Card: React.FC<CardProps> = ({
         return {
           borderStyle: 'single',
           borderColor: selected ? theme.colors.primary : theme.colors.border,
-          borderLeft: 'single',
-          borderRight: 'single',
-          borderBottom: 'single',
-          borderTop: 'single',
+          backgroundColor: theme.colors.background,
           shadow: true,
         };
       case 'default':
