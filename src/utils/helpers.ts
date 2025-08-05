@@ -1,4 +1,4 @@
-import { execa, ExecaChildProcess } from 'execa';
+import { execa } from 'execa';
 import chalk from 'chalk';
 import { TextProps } from 'ink';
 import { logger, handleError } from './logger';
@@ -278,11 +278,14 @@ export const formatText = (text: string, props: TextProps = {}): string => {
  * Create a loading spinner
  */
 export const createSpinner = (text: string, spinnerType = 'dots'): Spinner => {
+  const framesMap: Record<string, string[]> = {
+    dots: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+    line: ['-', '\\', '|', '/'],
+  };
+
   const spinner = {
     interval: 80,
-    frames: [
-      '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'
-    ],
+    frames: framesMap[spinnerType] || framesMap.dots,
     text: '',
     start(text: string) {
       this.text = text;
@@ -291,6 +294,13 @@ export const createSpinner = (text: string, spinnerType = 'dots'): Spinner => {
     },
     stop() {
       process.stdout.write('\r' + ' '.repeat(process.stdout.columns || 80) + '\r');
+      return this;
+    },
+    stopAndPersist(options?: { symbol?: string; text?: string }) {
+      this.stop();
+      const symbol = options?.symbol ?? ' ';
+      const text = options?.text ?? this.text;
+      console.log(`${symbol} ${text}`);
       return this;
     },
     succeed(text?: string) {
@@ -316,13 +326,13 @@ export const createSpinner = (text: string, spinnerType = 'dots'): Spinner => {
     render(frame: number) {
       const frameIndex = frame % this.frames.length;
       process.stdout.write(
-        '\r' + 
-        chalk.blue(this.frames[frameIndex]) + 
-        ' ' + 
+        '\r' +
+        chalk.blue(this.frames[frameIndex]) +
+        ' ' +
         this.text
       );
     },
   };
-  
+
   return spinner.start(text);
 };
