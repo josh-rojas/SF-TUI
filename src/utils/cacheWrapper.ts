@@ -25,8 +25,8 @@ export function refreshCacheConfig(): void {
 export function withCache<T extends (...args: any[]) => any>(
   fn: T,
   keyGenerator?: (...args: Parameters<T>) => string
-): (...args: Parameters<T>) => Promise<ReturnType<T>> {
-  return async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
+  return async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> => {
     if (!config.get<Config['cache']['enabled']>('cache.enabled')) {
       return fn(...args);
     }
