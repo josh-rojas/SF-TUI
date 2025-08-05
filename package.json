@@ -22,8 +22,7 @@
     "postversion": "git push && git push --tags"
   },
   "vitest": {
-    "environment": "jsdom",
-    "setupFiles": "./tests/setup.ts",
+    "environment": "node",
     "globals": true,
     "coverage": {
       "provider": "v8",
