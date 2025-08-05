@@ -11,6 +11,10 @@ type BreadcrumbProps = {
 };
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => {
+  if (!items || items.length === 0) {
+    return null;
+  }
+
   return (
     <Box flexDirection="row" marginBottom={1}>
       {items.map((item, index) => (
