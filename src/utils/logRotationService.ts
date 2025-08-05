@@ -1,7 +1,5 @@
 import fs from 'fs-extra';
-import path from 'path';
-import { LoggerConfig as ExternalLoggerConfig } from '../config/loggerConfig'; // Assuming this is the main config
-import { logger as mainLogger } from './logger'; // For internal logging of rotation issues
+import { LoggerConfig as ExternalLoggerConfig } from '../config/loggerConfig';
 
 type RotationConfig = Pick<ExternalLoggerConfig, 'logFilePath' | 'maxLogFileSize' | 'maxLogFiles' | 'fileOutput'>;
 

@@ -90,9 +90,9 @@ const loadConfig = (): Config => {
       const configData = fs.readFileSync(CONFIG_FILE, 'utf8');
       return deepMerge({ ...defaultConfig }, JSON.parse(configData));
     }
-    
+
     // If no config file exists, create one with defaults
-    saveConfig(defaultConfig);
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(defaultConfig, null, 2), 'utf8');
     return { ...defaultConfig };
   } catch (error) {
     console.error('Error loading configuration:', error);

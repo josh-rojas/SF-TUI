@@ -1,5 +1,5 @@
 import { cacheService, CacheService } from './cache';
-import { config } from '../config';
+import { config, type Config } from '../config';
 import { logger } from './logger';
 
 // Initialize cache with config
@@ -21,33 +21,36 @@ export function refreshCacheConfig(): void {
  * @param keyGenerator Function to generate cache key from args
  * @returns Wrapped function with caching
  */
-export function withCache<T extends (...args: any[]) => any>(
+export function withCache<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   keyGenerator?: (...args: Parameters<T>) => string
-): (...args: Parameters<T>) => ReturnType<T> {
-  return async (...args: Parameters<T>): Promise<ReturnType<T>> => {
-    if (!config.get<Config['cache']['enabled']>('cache.enabled')) {
-      return fn(...args);
+): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>> {
+  return async (
+    ...args: Parameters<T>
+  ): Promise<Awaited<ReturnType<T>>> => {
+    const cacheConfig = config.get<Config['cache']>('cache');
+    if (!cacheConfig?.enabled) {
+      return await fn(...args);
     }
-    
+
     // Generate cache key
-    const cacheKey = keyGenerator 
+    const cacheKey = keyGenerator
       ? keyGenerator(...args)
       : cacheService.generateKey(fn.name, args);
-    
+
     // Check cache
     const cachedResult = cacheService.get(cacheKey);
-    if (cachedResult) {
+    if (cachedResult !== null) {
       logger.debug(`Cache hit for ${fn.name}`);
       return cachedResult;
     }
-    
+
     // Execute function
     const result = await fn(...args);
-    
+
     // Cache result
     cacheService.set(cacheKey, result);
-    
+
     return result;
   };
 }
